@@ -1,0 +1,13 @@
+Date,Account,Category,Amount,Currency,Note,Income/Expense
+2026-07-01,Card,Зарплата,35000.00,UAH,Основна зарплата,Income
+2026-07-05,Card,Продукти,980.00,UAH,Сільпо,Expense
+2026-07-10,Card,Комуналка,1950.00,UAH,Оплата комуналки,Expense
+2026-07-15,Card,Кафе,520.00,UAH,Зустріч з друзями,Expense
+2026-07-20,Card,Транспорт,600.00,UAH,WOG пальне,Expense
+2026-07-25,Card,Продукти,1150.00,UAH,Novus,Expense
+2026-08-01,Card,Зарплата,35000.00,UAH,Основна зарплата,Income
+2026-08-04,Card,Продукти,1200.00,UAH,Сільпо,Expense
+2026-08-08,Card,Комуналка,2100.00,UAH,Оплата за липень,Expense
+2026-08-14,Card,Кафе,650.00,UAH,Кав'ярня,Expense
+2026-08-18,Card,Транспорт,750.00,UAH,ОККО пальне,Expense
+2026-08-22,Card,Продукти,1400.00,UAH,Ашан,Expense
