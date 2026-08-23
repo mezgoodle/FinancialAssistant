@@ -1,58 +1,55 @@
+import os
 from typing import Any, Callable, List, Optional
-from google import genai
+from google.adk.agents.llm_agent import Agent
+from google.adk.runners import Runner
+from google.adk.sessions import InMemorySessionService
 from google.genai import types
-from src.config import GEMINI_API_KEY, GEMINI_MODEL
-from src.agent.tools import ALL_TOOLS
+from src.config import GEMINI_API_KEY
 
-SYSTEM_INSTRUCTION = """Ти — професійний, точний та уважний персональний фінансовий асистент.
-Твоє головне завдання — допомагати користувачеві аналізувати його доходи та витрати на основі реальних даних, завантажених із файлів (CSV, XLSX).
-
-КРИТИЧНІ ПРАВИЛА:
-1. Завжди спирайся ВИКЛЮЧНО на реальні дані, отримані через виклики інструментів (tools).
-2. НІКОЛИ не вигадуй суми, транзакції, дати чи категорії. Якщо даних за певний період немає або вони неповні — чесно про це повідоми.
-3. При порівнянні періодів (місяць до місяця, рік до року) чітко вказуй різницю в абсолютних значеннях (грн/валюта) та у відсотках.
-4. Оформлюй відповіді структуровано: використовуй списки, жирний шрифт для сум та чисті Markdown-таблиці для категорій.
-5. Спілкуйся українською мовою (або мовою користувача, якщо він запитує іншою).
-"""
+if GEMINI_API_KEY and not os.getenv("GEMINI_API_KEY"):
+    os.environ["GEMINI_API_KEY"] = GEMINI_API_KEY
 
 
 class FinancialAssistantAgent:
+    """
+    Google Agent Development Kit (ADK 2.0) Financial Assistant runner.
+    """
+
     def __init__(
         self,
-        api_key: Optional[str] = None,
-        model_name: Optional[str] = None,
-        tools: Optional[List[Callable[..., Any]]] = None,
+        agent: Optional[Agent] = None,
+        session_id: str = "default_session",
+        user_id: str = "default_user",
     ):
-        self.api_key = api_key or GEMINI_API_KEY
-        self.model_name = model_name or GEMINI_MODEL
-        self.tools = tools if tools is not None else ALL_TOOLS
-        
-        self.client = genai.Client(api_key=self.api_key)
-        self.chat = None
-        self._init_chat_session()
-
-    def _init_chat_session(self):
-        config_params = {
-            "system_instruction": SYSTEM_INSTRUCTION,
-            "temperature": 0.2,  # Low temperature for analytical accuracy
-        }
-        if self.tools:
-            config_params["tools"] = self.tools
-
-        config = types.GenerateContentConfig(**config_params)
-        self.chat = self.client.chats.create(
-            model=self.model_name,
-            config=config,
+        from src.agent.agent import root_agent
+        self.agent = agent or root_agent
+        self.session_id = session_id
+        self.user_id = user_id
+        self.session_service = InMemorySessionService()
+        self.runner = Runner(
+            agent=self.agent,
+            app_name="financial_assistant",
+            session_service=self.session_service,
         )
 
-    def set_tools(self, tools: List[Callable[..., Any]]):
-        """Update tools and refresh chat session."""
-        self.tools = tools
-        self._init_chat_session()
-
     def send_message(self, message: str) -> str:
-        """Send message to the agent and receive response."""
-        if not self.chat:
-            self._init_chat_session()
-        response = self.chat.send_message(message)
-        return response.text
+        """Send a message to the agent using the ADK 2.0 Runner."""
+        content = types.Content(
+            role="user",
+            parts=[types.Part.from_text(text=message)],
+        )
+
+        reply_texts = []
+        for event in self.runner.run(
+            user_id=self.user_id,
+            session_id=self.session_id,
+            new_message=content,
+        ):
+            if event.content and event.content.parts:
+                for part in event.content.parts:
+                    if part.text:
+                        reply_texts.append(part.text)
+            elif hasattr(event, "text") and event.text:
+                reply_texts.append(event.text)
+
+        return "".join(reply_texts) or "Немає відповіді від асистента."
